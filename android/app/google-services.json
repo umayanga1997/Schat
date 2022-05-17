@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "406675038509",
+    "project_id": "schatdem",
+    "storage_bucket": "schatdem.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:406675038509:android:96843c5043d4e66aecb3a4",
+        "android_client_info": {
+          "package_name": "com.schat.newappname"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "406675038509-v62qohf0edssll58ok9r32vptgl3a8ac.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.schat.newappname",
+            "certificate_hash": "431dc8e5380b579f7eba94c1fa42a0fd496f1aa3"
+          }
+        },
+        {
+          "client_id": "406675038509-2v5cpvvqc23j81a2s7s0084q5qsrb9rm.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDEOfV_CUluTuh1aLkHmntWCwDhlns0k1Q"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "406675038509-2v5cpvvqc23j81a2s7s0084q5qsrb9rm.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
