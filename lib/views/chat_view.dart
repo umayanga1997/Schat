@@ -6,6 +6,7 @@ import 'package:crypt_chat/utils/services/encryption_decryption.dart';
 import 'package:encrypt/encrypt.dart' as encrypt;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_windowmanager/flutter_windowmanager.dart';
 
 class ChatScreen extends StatefulWidget {
   final String ChatRoomID;
@@ -20,29 +21,47 @@ class _ChatScreenState extends State<ChatScreen> {
   TextEditingController textEditingController = new TextEditingController();
   DatabaseMethods databaseMethods = new DatabaseMethods();
   Stream<QuerySnapshot> ChatMessageStream;
-  QuerySnapshot UserSnapshot, cUserSnapshot;
+  DocumentSnapshot partnerDataSnapshot, curentUserDataSnapshot;
   ScrollController controller = ScrollController();
+
+  bool isScAvailable = false;
 
   @override
   void initState() {
-    databaseMethods.getChatMessage(widget.ChatRoomID).then((val) {
-      setState(() {
-        ChatMessageStream = val;
-      });
-    });
-    String username = widget.ChatRoomID.replaceAll("_", "")
-        .replaceAll(Constants.currentUser, "");
-    databaseMethods.getUserInfoByUsername(username).then((val){
-      setState(() {
-        UserSnapshot=val;
-      });
-    });
-    scrollToEnd();
     super.initState();
+    init();
+
+    scrollToEnd();
+    Currentuser();
+  }
+
+  void init() async {
+    String partnerID = widget.ChatRoomID.replaceAll("_", "")
+        .replaceAll(Constants.currentUser['user_id'], "");
+    await databaseMethods.getUserInfoByUserID(partnerID).then((val) {
+      partnerDataSnapshot = val;
+    });
+    await databaseMethods.getChatMessage(widget.ChatRoomID).then((val) {
+      ChatMessageStream = val;
+    });
+    await disableCapture();
+  }
+
+  Future<void> disableCapture() async {
+    if (partnerDataSnapshot?.data()['isScAvailable'] ?? true) {
+      await FlutterWindowManager.clearFlags(FlutterWindowManager.FLAG_SECURE);
+      setState(() {
+        isScAvailable = true;
+      });
+    } else {
+      await FlutterWindowManager.addFlags(FlutterWindowManager.FLAG_SECURE);
+      setState(() {
+        isScAvailable = false;
+      });
+    }
   }
 
   Widget chatMessageList() {
-    Currentuser();
     return StreamBuilder(
         stream: ChatMessageStream,
         builder: (context, snapshot) {
@@ -57,7 +76,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     return ChatMessageItem(
                         EncryptionDecryption.decryptMessage(
                             encrypt.Encrypted.fromBase64(msg)),
-                        Constants.currentUser ==
+                        Constants.currentUser['user_id'] ==
                                 snapshot.data.docs[index].data()["sentBy"]
                             ? true
                             : false,
@@ -125,18 +144,19 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  scrollToEnd() {
+  scrollToEnd() async {
     Timer(Duration(milliseconds: 500),
         () => controller.jumpTo(controller.position.maxScrollExtent));
   }
 
-  @override
-  void Currentuser(){
-    String cuser = widget.ChatRoomID.replaceAll("_", "")
-        .replaceAll(UserSnapshot.docs[0].data()["name"], "");
-    databaseMethods.getUserInfoByUsername(cuser).then((val){
+  void Currentuser() {
+    // String cuser = widget.ChatRoomID.replaceAll("_", "")
+    //     .replaceAll(partnerDataSnapshot.data()["user_id"], "");
+    databaseMethods
+        .getUserInfoByUserID(Constants.currentUser['user_id'])
+        .then((val) {
       setState(() {
-        cUserSnapshot=val;
+        curentUserDataSnapshot = val;
       });
     });
   }
@@ -144,130 +164,157 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   Widget build(BuildContext context) {
     Size screenSize = MediaQuery.of(context).size;
-    String username = widget.ChatRoomID.replaceAll("_", "")
-        .replaceAll(Constants.currentUser, "");
-    return UserSnapshot!=null ? Scaffold(
-      appBar: AppBar(
-          centerTitle: true,
-          elevation: 0,
-          title: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              CircleAvatar(
-                backgroundImage: NetworkImage(UserSnapshot.docs[0].data()['picUrl']),//AssetImage("assets/images/user_avatar.png"),
-                maxRadius: 20,
-              ),
-              SizedBox(
-                width: 12,
-              ),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
+    // String username = widget.ChatRoomID.replaceAll("_", "")
+    //     .replaceAll(Constants.currentUser['username'], "");
+    return partnerDataSnapshot != null
+        ? Scaffold(
+            appBar: AppBar(
+                centerTitle: true,
+                elevation: 0,
+                title: Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(UserSnapshot.docs[0].data()["name"][0].toUpperCase() + UserSnapshot.docs[0].data()["name"].substring((1)),
-                        style: TextStyle(
-                            fontSize: 20, fontWeight: FontWeight.w600)),
-                    SizedBox(height: 6),
-                    Text('@${username}',
-                        style:
-                            TextStyle(color: Colors.white, fontSize: 13)),
+                    CircleAvatar(
+                      backgroundImage: NetworkImage(partnerDataSnapshot.data()[
+                          'picUrl']), //AssetImage("assets/images/user_avatar.png"),
+                      maxRadius: 20,
+                    ),
+                    SizedBox(
+                      width: 12,
+                    ),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                              partnerDataSnapshot
+                                      .data()["name"][0]
+                                      .toUpperCase() +
+                                  partnerDataSnapshot
+                                      .data()["name"]
+                                      .substring((1)),
+                              style: TextStyle(
+                                  fontSize: 20, fontWeight: FontWeight.w600)),
+                          SizedBox(height: 6),
+                          Text('@${partnerDataSnapshot.data()['username']}',
+                              style:
+                                  TextStyle(color: Colors.white, fontSize: 13)),
+                        ],
+                      ),
+                    ),
+                    Spacer(),
+                    Icon(
+                      Icons.screenshot,
+                      color: isScAvailable ? Colors.green : Colors.red,
+                    )
                   ],
-                ),
-              ),
-            ],
-          )),
-      body: Column(
-        children: [
-          Expanded(child: chatMessageList()),
-          Container(
-            padding: EdgeInsets.symmetric(
-              horizontal: 10.0,
-              vertical: 10.0,
-            ),
-            decoration: BoxDecoration(
-              color: Theme.of(context).scaffoldBackgroundColor,
-            ),
-            child: SafeArea(
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: screenSize.width * 0.05,
-                      ),
-                      decoration: BoxDecoration(
-                        color: MediaQuery.of(context).platformBrightness ==
-                                Brightness.light
-                            ? Theme.of(context).primaryColor.withOpacity(0.05)
-                            : Theme.of(context).primaryColor.withOpacity(0.4),
-                        borderRadius: BorderRadius.circular(40),
-                      ),
-                      child: TextField(
-                        onTap: () {
-                          Timer(
-                              Duration(milliseconds: 300),
-                              () => controller
-                                  .jumpTo(controller.position.maxScrollExtent));
-                        },
-                        controller: textEditingController,
-                        decoration: InputDecoration(
-                          hintText: "Type message...",
-                          hintStyle: TextStyle(
+                )),
+            body: Column(
+              children: [
+                Expanded(child: chatMessageList()),
+                Container(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 10.0,
+                    vertical: 10.0,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).scaffoldBackgroundColor,
+                  ),
+                  child: SafeArea(
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: screenSize.width * 0.05,
+                            ),
+                            decoration: BoxDecoration(
                               color:
                                   MediaQuery.of(context).platformBrightness ==
                                           Brightness.light
-                                      ? Colors.black
-                                      : Colors.white,
-                              fontSize: 15),
-                          border: InputBorder.none,
+                                      ? Theme.of(context)
+                                          .primaryColor
+                                          .withOpacity(0.05)
+                                      : Theme.of(context)
+                                          .primaryColor
+                                          .withOpacity(0.4),
+                              borderRadius: BorderRadius.circular(40),
+                            ),
+                            child: TextField(
+                              onTap: () {
+                                Timer(
+                                    Duration(milliseconds: 300),
+                                    () => controller.jumpTo(
+                                        controller.position.maxScrollExtent));
+                              },
+                              controller: textEditingController,
+                              decoration: InputDecoration(
+                                hintText: "Type message...",
+                                hintStyle: TextStyle(
+                                    color: MediaQuery.of(context)
+                                                .platformBrightness ==
+                                            Brightness.light
+                                        ? Colors.black
+                                        : Colors.white,
+                                    fontSize: 15),
+                                border: InputBorder.none,
+                              ),
+                            ),
+                          ),
                         ),
-                      ),
+                        SizedBox(width: 5),
+                        Container(
+                          width: screenSize.width * 0.125,
+                          height: screenSize.width * 0.125,
+                          child: FloatingActionButton(
+                            onPressed: () {
+                              sendMessage();
+                            },
+                            child: Icon(
+                              Icons.send,
+                              color: Colors.white,
+                              size: 18,
+                            ),
+                            backgroundColor:
+                                Theme.of(context).primaryColor.withOpacity(0.9),
+                            elevation: 0,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  SizedBox(width: 5),
-                  Container(
-                    width: screenSize.width * 0.125,
-                    height: screenSize.width * 0.125,
-                    child: FloatingActionButton(
-                      onPressed: () {
-                        sendMessage();
-                      },
-                      child: Icon(
-                        Icons.send,
-                        color: Colors.white,
-                        size: 18,
-                      ),
-                      backgroundColor:
-                          Theme.of(context).primaryColor.withOpacity(0.9),
-                      elevation: 0,
-                    ),
-                  ),
-                ],
-              ),
+                )
+              ],
             ),
           )
-        ],
-      ),
-    ):Container(
-      color: Theme.of(context).scaffoldBackgroundColor,
-      child: Center(child: CircularProgressIndicator()),
-    );
+        : Container(
+            color: Theme.of(context).scaffoldBackgroundColor,
+            child: Center(child: CircularProgressIndicator()),
+          );
   }
 
   sendMessage() {
     if (textEditingController.text.isNotEmpty) {
       String encryptedMessage =
-      EncryptionDecryption.encryptMessage(textEditingController.text);
+          EncryptionDecryption.encryptMessage(textEditingController.text);
       int time = DateTime.now().millisecondsSinceEpoch;
       Map<String, dynamic> ChatMessageMap = {
         "message": encryptedMessage,
-        "sentBy": Constants.currentUser,
+        "sentBy": Constants.currentUser['user_id'],
         "time": time
       };
 
       databaseMethods.addChatMessage(widget.ChatRoomID, ChatMessageMap);
-      databaseMethods.addLastChat(widget.ChatRoomID, encryptedMessage, time, Constants.currentUser, cUserSnapshot.docs[0].data()['picUrl'], UserSnapshot.docs[0].data()["name"],UserSnapshot.docs[0].data()['picUrl']);
+      databaseMethods.addLastChat(
+          widget.ChatRoomID,
+          encryptedMessage,
+          time,
+          Constants.currentUser['user_id'],
+          curentUserDataSnapshot.data()['picUrl'],
+          partnerDataSnapshot.data()["user_id"],
+          // partnerDataSnapshot.data()["name"],
+          partnerDataSnapshot.data()['picUrl']);
       textEditingController.text = "";
       scrollToEnd();
     }

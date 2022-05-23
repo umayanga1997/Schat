@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:crypt_chat/constants/app_constants.dart';
 import 'package:crypt_chat/utils/helpers/helper_functions.dart';
-import 'package:crypt_chat/utils/helpers/shared_pref_helper.dart';
+// import 'package:crypt_chat/utils/helpers/shared_pref_helper.dart';
 import 'package:crypt_chat/utils/services/database.dart';
 import 'package:crypt_chat/utils/services/encryption_decryption.dart';
 import 'package:crypt_chat/views/auth/login_view.dart';
@@ -9,9 +9,13 @@ import 'package:crypt_chat/views/chat_view.dart';
 import 'package:crypt_chat/views/search_view.dart';
 import 'package:crypt_chat/utils/services/auth.dart';
 import 'package:crypt_chat/widgets/alert_dialog.dart';
+import 'package:dart_jsonwebtoken/dart_jsonwebtoken.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:encrypt/encrypt.dart' as encrypt;
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:flutter_session/flutter_session.dart';
+// import 'package:flutter_windowmanager/flutter_windowmanager.dart';
 
 class ChatRooms extends StatefulWidget {
   @override
@@ -20,7 +24,7 @@ class ChatRooms extends StatefulWidget {
 
 class _ChatRoomsState extends State<ChatRooms> {
   AuthMethods authMethods = new AuthMethods();
-  SharedPrefHelper sharedPrefHelper = new SharedPrefHelper();
+  // SharedPrefHelper sharedPrefHelper = new SharedPrefHelper();
   DatabaseMethods databaseMethods = new DatabaseMethods();
   QuerySnapshot searchUserSnapshot;
 
@@ -46,12 +50,26 @@ class _ChatRoomsState extends State<ChatRooms> {
   }
 
   void getCurrUserandChats() async {
-    Constants.currentUser = await sharedPrefHelper.getUsernameSharedPref();
-    databaseMethods.getChatRooms(Constants.currentUser).then((val) => {
-      setState(() {
-        ChatRoomsStream = val;
-      })
-    });
+    // Session Key Release
+    final storage = new FlutterSecureStorage();
+    String key_value = await storage.read(key: 'key_of_session');
+    // Find session Data
+    dynamic token = await FlutterSession().get(key_value);
+    // Check auth
+    if (token != null && token != '') {
+      // Decript Token / Verify a token
+      final jwt = JWT.verify(token, SecretKey(key_value));
+
+      Constants.currentUser = jwt.payload;
+
+      databaseMethods
+          .getChatRooms(Constants.currentUser['user_id'])
+          .then((val) => {
+                setState(() {
+                  ChatRoomsStream = val;
+                })
+              });
+    }
   }
 
   _ChatRoomsState() {
@@ -60,10 +78,10 @@ class _ChatRoomsState extends State<ChatRooms> {
         setState(() {
           _searchText = SearchEditingController.text;
         });
-        databaseMethods.getUserInfoByUsername(_searchText).then((val) {
+        databaseMethods.getUserInfoByUserID(_searchText).then((val) {
           if (val != null && val.size > 0) {
             String ChatRoomID = HelperFunctions.getChatRoomId(
-                _searchText, Constants.currentUser);
+                _searchText, Constants.currentUser['name']);
             databaseMethods.getCurrUserChatRooms(ChatRoomID).then((val) => {
                   setState(() {
                     ChatRoomsStream = val;
@@ -109,8 +127,7 @@ class _ChatRoomsState extends State<ChatRooms> {
     return StreamBuilder(
         stream: ChatRoomsStream,
         builder: (context, snapshot) {
-
-          if(snapshot.hasData == null) {
+          if (snapshot.hasData == null) {
             return Center(child: CircularProgressIndicator());
           }
           return snapshot.hasData
@@ -130,26 +147,39 @@ class _ChatRoomsState extends State<ChatRooms> {
                       lastMessageTime =
                           snapshot.data.docs[index].data()["LastChat"]["Time"];
 
-                      String username = snapshot.data.docs[index].data()["chatRoomID"].replaceAll("_", "")
-                          .replaceAll(Constants.currentUser, "");
+                      String userID = snapshot.data.docs[index]
+                          .data()["chatRoomID"]
+                          .replaceAll("_", "")
+                          .replaceAll(Constants.currentUser['user_id'], "");
 
-                      String pic = snapshot.data.docs[index].data()["LastChat"]["picUrl"+username];
+                      String pic = snapshot.data.docs[index].data()["LastChat"]
+                          ["picUrl" + userID];
+                      // Geting partner username
+                      String partnerID = ChatRoomID.replaceAll('_', "")
+                          .replaceAll(Constants.currentUser['user_id'], "");
+                      // DocumentSnapshot docSnapshot;
+                      // String partnername;
+                      // databaseMethods
+                      //     .getUserInfoByUserID(partnerID)
+                      //     .then((val) {
+                      //   partnername = val.data()['name'];
+                      // });
 
-                      return ChatRoomsItem(ChatRoomID, lastMessage,
-                          DateTime.fromMillisecondsSinceEpoch(lastMessageTime), pic);
+                      return ChatRoomsItem(
+                          ChatRoomID,
+                          partnerID,
+                          lastMessage,
+                          DateTime.fromMillisecondsSinceEpoch(lastMessageTime),
+                          pic);
                     }
                     return Container();
-
                   })
-              :Container();
+              : Container();
         });
   }
 
-  Widget ChatRoomsItem(
-
-      String ChatRoomID, String lastMessage, final lastMessageTime, pic) {
-    String username =
-        ChatRoomID.replaceAll('_', "").replaceAll(Constants.currentUser, "");
+  Widget ChatRoomsItem(String ChatRoomID, String partnerID, String lastMessage,
+      final lastMessageTime, pic) {
     String lastMessageDate = lastMessageTime.toString().substring(0, 10);
 
     String lastMessageTimestamp = lastMessageTime.toString().substring(11, 16);
@@ -174,9 +204,8 @@ class _ChatRoomsState extends State<ChatRooms> {
               child: Row(
                 children: [
                   CircleAvatar(
-                    backgroundImage:
-                      NetworkImage(pic),
-                      //AssetImage("assets/images/user_avatar.png"),
+                    backgroundImage: NetworkImage(pic),
+                    //AssetImage("assets/images/user_avatar.png"),
                     maxRadius: 28,
                   ),
                   SizedBox(
@@ -187,8 +216,23 @@ class _ChatRoomsState extends State<ChatRooms> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('@${username}',
-                              style: TextStyle(fontSize: 16)),
+                          FutureBuilder<dynamic>(
+                              future: FirebaseFirestore.instance
+                                  .collection('users')
+                                  .doc(partnerID)
+                                  .get(),
+                              builder: (context, snapshot) {
+                                if (snapshot.connectionState ==
+                                    ConnectionState.done) if (snapshot != null)
+                                  return Text(
+                                      snapshot.data['name'][0].toUpperCase() +
+                                          snapshot.data['name'].substring((1)),
+                                      style: TextStyle(fontSize: 16));
+                                else
+                                  return Container();
+                                else
+                                  return Container();
+                              }),
                           SizedBox(height: 6),
                           Text(
                               lastMessage.length > 20
@@ -216,8 +260,6 @@ class _ChatRoomsState extends State<ChatRooms> {
     );
   }
 
-
-
   void LogoutPressed() async {
     final action = await AlertDialogsClass.logoutDialog(
         context, 'Logout', 'Are you sure you want to exit?');
@@ -228,11 +270,9 @@ class _ChatRoomsState extends State<ChatRooms> {
     }
   }
 
-
-
   @override
   Widget build(BuildContext context) {
-    Size screenSize = MediaQuery.of(context).size;
+    // Size screenSize = MediaQuery.of(context).size;
     return Scaffold(
       appBar: AppBar(
         //centerTitle: true,

@@ -2,41 +2,47 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 class DatabaseMethods {
   getAllUsers() async {
+    return await FirebaseFirestore.instance.collection('users').get();
+  }
+
+  dynamic getUserInfoByUserID(var userID) async {
     return await FirebaseFirestore.instance
         .collection('users')
+        .doc(userID)
         .get();
   }
 
-  getUserInfoByUsername(String username) async {
+  getUserInfoByUserName(String username) async {
     return await FirebaseFirestore.instance
         .collection('users')
-        .where('username', isEqualTo: username)
+        .where("username", isEqualTo: username)
         .get();
   }
 
-  updateUserInfo(String username,String name,String bio) async {
+  updateUserInfo(
+      var userID, String name, String bio, bool isScAvailable) async {
     return await FirebaseFirestore.instance
         .collection('users')
-        .doc(username)
-        .update({'name':name,'bio':bio});
+        .doc(userID)
+        .update({'name': name, 'bio': bio, 'isScAvailable': isScAvailable});
   }
 
-  updateUserProfilePic(String username,String url) async {
+  updateUserProfilePic(var userID, String url) async {
     return await FirebaseFirestore.instance
         .collection('users')
-        .doc(username)
-        .update({'picUrl':url});
+        .doc(userID)
+        .update({'picUrl': url});
   }
 
-  getUserInfoByEmail(String email) async {
+  getUserInfoByID(var userID) async {
     return await FirebaseFirestore.instance
         .collection('users')
-        .where('email', isEqualTo: email)
+        .doc(userID)
         .get();
   }
 
-  uploadUserInfo(String username,Map<String, String> userInfoMap) {
-    FirebaseFirestore.instance.collection('users').doc(username).set(userInfoMap);
+  uploadUserInfo(var userID, Map<String, String> userInfoMap) {
+    FirebaseFirestore.instance.collection('users').doc(userID).set(userInfoMap);
   }
 
   createChatRoom(String ChatRoomID, Map<String, dynamic> ChatRoomMap) {
@@ -54,11 +60,15 @@ class DatabaseMethods {
         .add(ChatMessageMap);
   }
 
-  addLastChat(String ChatRoomID, String lastChatMessage,int time, String cuser, String upic, String nuser, String npic) {
-    FirebaseFirestore.instance
-        .collection('ChatRooms')
-        .doc(ChatRoomID)
-        .update({'LastChat.Message': lastChatMessage,'LastChat.Time':time, 'LastChat.picUrl'+cuser:upic, 'LastChat.picUrl'+nuser:npic});
+  addLastChat(String ChatRoomID, String lastChatMessage, int time, String cuser,
+      String upic, String nuser, /* String nUsername,*/ String npic) {
+    FirebaseFirestore.instance.collection('ChatRooms').doc(ChatRoomID).update({
+      'LastChat.Message': lastChatMessage,
+      // 'LastChat.pName': nUsername,
+      'LastChat.Time': time,
+      'LastChat.picUrl' + cuser: upic,
+      'LastChat.picUrl' + nuser: npic
+    });
   }
 
   getChatMessage(String ChatRoomID) async {
@@ -70,23 +80,24 @@ class DatabaseMethods {
         .snapshots();
   }
 
-  getChatRooms(String username) async {
+  getChatRooms(var userId) async {
     return await FirebaseFirestore.instance
         .collection('ChatRooms')
-        .where('users', arrayContains: username)
+        .where('users', arrayContains: userId)
         .snapshots();
   }
 
   getCurrUserChatRooms(String ChatRoomID) async {
     return await FirebaseFirestore.instance
         .collection('ChatRooms')
-        .where('chatRoomID',isEqualTo: ChatRoomID)
+        .where('chatRoomID', isEqualTo: ChatRoomID)
         .snapshots();
   }
+
   getCurrUserChatRoomsGet(String ChatRoomID) async {
     return await FirebaseFirestore.instance
         .collection('ChatRooms')
-        .where('chatRoomID',isEqualTo: ChatRoomID)
+        .where('chatRoomID', isEqualTo: ChatRoomID)
         .get();
   }
 }

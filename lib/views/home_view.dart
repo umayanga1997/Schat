@@ -1,6 +1,9 @@
 import 'package:crypt_chat/views/chat_rooms_view.dart';
 import 'package:crypt_chat/views/profile_view.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_screen_lock/flutter_screen_lock.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:local_auth/local_auth.dart';
 
 class HomeScreen extends StatefulWidget {
   //final String text;
@@ -11,33 +14,35 @@ class HomeScreen extends StatefulWidget {
   _HomeScreenState createState() {
     return _HomeScreenState();
   }
-
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final scaffoldKey=GlobalKey<ScaffoldState>();
+  final scaffoldKey = GlobalKey<ScaffoldState>();
   int _pageIndex = 0;
   PageController _pageController;
 
   List<Widget> tabPages = [
-   ChatRooms(),
-   ProfileScreen(),
+    ChatRooms(),
+    ProfileScreen(),
   ];
 
   @override
-  void initState(){
+  void initState() {
+    openLockScreen(context);
     super.initState();
     _pageController = PageController(initialPage: _pageIndex);
-    //snackBar();
   }
 
-  /*@override
-  void snackBar() {
-    if (widget.text != null) {
-      SnackBar snackBar = SnackBar(content: Text('Profile Picture updated!'));
-      scaffoldKey.currentState.showSnackBar(snackBar);
+  Future<void> localAuth(BuildContext context) async {
+    final localAuth = LocalAuthentication();
+    final didAuthenticate = await localAuth.authenticateWithBiometrics(
+      localizedReason: 'Please authenticate',
+      // biometricOnly: true,
+    );
+    if (didAuthenticate) {
+      Navigator.pop(context);
     }
-  }*/
+  }
 
   @override
   void dispose() {
@@ -45,32 +50,66 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
+  Future openLockScreen(BuildContext context) async {
+    await Future.delayed(Duration(seconds: 1));
+    // final inputController = InputController();
+
+    // Find Pin fron secure storage
+    final storage = new FlutterSecureStorage();
+    String pin = await storage.read(key: 'pin_key');
+
+    if (pin != "" && pin != null)
+      screenLock<void>(
+        context: context,
+        correctString: pin,
+        digits: pin.length,
+        // confirmation: true,
+        // inputController: inputController,
+        canCancel: false,
+        didConfirmed: (matchedText) {
+          // ignore: avoid_print
+          Navigator.pop(context);
+        },
+        customizedButtonChild: const Icon(
+          Icons.fingerprint,
+        ),
+        customizedButtonTap: () async {
+          await localAuth(context);
+        },
+        didOpened: () async {
+          await localAuth(context);
+        },
+      );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-        bottomNavigationBar:BottomNavigationBar(
-          currentIndex: _pageIndex,
-          type: BottomNavigationBarType.fixed,
-          onTap: onTabTapped,
-          items: [
-            BottomNavigationBarItem(
-                icon: Icon(Icons.message_rounded), label: "Chats"),
-            BottomNavigationBarItem(
-                icon: CircleAvatar(
-                  backgroundImage: AssetImage("assets/images/user_avatar.png"),
-                  radius: 12,
-                ),
-                label: "Profile"),
-          ],
+    // Define it to control the confirmation state with its own events.
 
-        ),
+    return Scaffold(
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _pageIndex,
+        type: BottomNavigationBarType.fixed,
+        onTap: onTabTapped,
+        items: [
+          BottomNavigationBarItem(
+              icon: Icon(Icons.message_rounded), label: "Chats"),
+          BottomNavigationBarItem(
+              icon: CircleAvatar(
+                backgroundImage: AssetImage("assets/images/user_avatar.png"),
+                radius: 12,
+              ),
+              label: "Profile"),
+        ],
+      ),
       body: PageView(
         children: tabPages,
         onPageChanged: onPageChanged,
         controller: _pageController,
-    ),
+      ),
     );
   }
+
   void onPageChanged(int page) {
     setState(() {
       this._pageIndex = page;
@@ -78,6 +117,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void onTabTapped(int index) {
-    this._pageController.animateToPage(index,duration: const Duration(milliseconds: 300),curve: Curves.easeInOut);
+    this._pageController.animateToPage(index,
+        duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
   }
 }

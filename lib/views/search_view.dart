@@ -28,6 +28,7 @@ class _SearchScreenState extends State<SearchScreen> {
             itemCount: searchUserSnapshot.docs.length,
             itemBuilder: (context, index) {
               return UserItem(
+                searchUserSnapshot.docs[index].data()["user_id"] ?? "",
                 searchUserSnapshot.docs[index].data()["username"],
                 searchUserSnapshot.docs[index].data()["name"],
                 searchUserSnapshot.docs[index].data()["bio"],
@@ -37,9 +38,10 @@ class _SearchScreenState extends State<SearchScreen> {
         : Container();
   }
 
-  createChatRoom(String username) {
-    List<String> users = [username, Constants.currentUser];
-    String chatRoomID = HelperFunctions.getChatRoomId(username, Constants.currentUser);
+  createChatRoom(String userID) {
+    List<String> users = [userID, Constants.currentUser['user_id']];
+    String chatRoomID =
+        HelperFunctions.getChatRoomId(userID, Constants.currentUser['user_id']);
     Map<String, dynamic> ChatRoomMap = {
       'chatRoomID': chatRoomID,
       'users': users
@@ -55,25 +57,34 @@ class _SearchScreenState extends State<SearchScreen> {
             shrinkWrap: true,
             itemCount: UsersSnapshot.docs.length,
             itemBuilder: (context, index) {
-              return UserItem(
-                  UsersSnapshot.docs[index].data()["username"],UsersSnapshot.docs[index].data()["name"], UsersSnapshot.docs[index].data()["bio"], UsersSnapshot.docs[index].data()["picUrl"]);
+              if (UsersSnapshot != null) {
+                return UserItem(
+                    UsersSnapshot.docs[index].data()["user_id"] ?? "",
+                    UsersSnapshot.docs[index].data()["username"],
+                    UsersSnapshot.docs[index].data()["name"],
+                    UsersSnapshot.docs[index].data()["bio"],
+                    UsersSnapshot.docs[index].data()["picUrl"]);
+              } else {
+                return null;
+              }
             })
         : Container();
   }
 
-  Widget UserItem(String username, String name,String bio,String pic) {
-    return username != Constants.currentUser
+  Widget UserItem(
+      var userID, String username, String name, String bio, String pic) {
+    return userID != Constants.currentUser['user_id']
         ? InkWell(
             onTap: () {
-              String chatRoomID =
-                  HelperFunctions.getChatRoomId(username, Constants.currentUser);
+              String chatRoomID = HelperFunctions.getChatRoomId(
+                  userID, Constants.currentUser['user_id']);
               databaseMethods.getCurrUserChatRoomsGet(chatRoomID).then((val) {
-                val.size>0
+                val.size > 0
                     ? Navigator.pushReplacement(
                         context,
                         MaterialPageRoute(
                             builder: (context) => ChatScreen(chatRoomID)))
-                    : createChatRoom(username);
+                    : createChatRoom(userID);
               });
             },
             child: Container(
@@ -84,8 +95,8 @@ class _SearchScreenState extends State<SearchScreen> {
                     child: Row(
                       children: [
                         CircleAvatar(
-                          backgroundImage:
-                          NetworkImage(pic),//AssetImage("assets/images/user_avatar.png"),
+                          backgroundImage: NetworkImage(
+                              pic), //AssetImage("assets/images/user_avatar.png"),
                           maxRadius: 28,
                         ),
                         SizedBox(
@@ -102,9 +113,15 @@ class _SearchScreenState extends State<SearchScreen> {
                                         name[0].toUpperCase() +
                                             name.substring((1)),
                                         style: TextStyle(fontSize: 16)),
-                                    Text(
-                                        ' - @${username}',
-                                        style: TextStyle(fontSize: 12,color: MediaQuery.of(context).platformBrightness==Brightness.light?Colors.black54:Colors.white54,fontWeight: FontWeight.bold))
+                                    Text(' - @${username}',
+                                        style: TextStyle(
+                                            fontSize: 12,
+                                            color: MediaQuery.of(context)
+                                                        .platformBrightness ==
+                                                    Brightness.light
+                                                ? Colors.black54
+                                                : Colors.white54,
+                                            fontWeight: FontWeight.bold))
                                   ],
                                 ),
                                 SizedBox(height: 6),
@@ -178,7 +195,13 @@ class _SearchScreenState extends State<SearchScreen> {
                         height: screenSize.height * 0.06,
                         child: TextField(
                           controller: SearchEditingController,
-                          style: TextStyle(fontSize: 16,color: Colors.white),
+                          onChanged: (value) {
+                            if (value == null || value == '') {
+                              searchUserSnapshot = null;
+                              getAllUsers();
+                            }
+                          },
+                          style: TextStyle(fontSize: 16, color: Colors.white),
                           decoration: InputDecoration(
                             hintText: 'Search username...',
                             hintStyle: TextStyle(color: Colors.white70),
@@ -191,11 +214,13 @@ class _SearchScreenState extends State<SearchScreen> {
                       InkWell(
                         onTap: () {
                           databaseMethods
-                              .getUserInfoByUsername(
+                              .getUserInfoByUserName(
                                   SearchEditingController.text)
-                              .then((val) => setState(() {
-                                    searchUserSnapshot = val;
-                                  }));
+                              .then((val) {
+                            setState(() {
+                              searchUserSnapshot = val;
+                            });
+                          });
                         },
                         child: Container(
                             height: screenSize.height * 0.06,
@@ -212,9 +237,9 @@ class _SearchScreenState extends State<SearchScreen> {
                   )),
                   Expanded(
                       child: searchUserSnapshot != null
-                          ? searchUserSnapshot.size > 0
+                          ? searchUserSnapshot.docs.length > 0
                               ? searchUsersList()
-                              : userList()
+                              : Text("User Not Found!")
                           : userList())
                 ],
               ),
