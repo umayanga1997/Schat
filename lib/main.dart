@@ -66,37 +66,58 @@ class _MyAppState extends State<MyApp> {
       title: 'CryptChat',
       theme: lightThemeData(context),
       darkTheme: darkThemeData(context),
-      initialRoute: '/',
-      routes: {
-        // When navigating to the "/" route, build the FirstScreen widget.
-        '/': (context) => isLoggedIn != null
-            ? isLoggedIn
-                ? Scaffold(
-                    body: HomeScreen(),
-                    floatingActionButton: Padding(
-                      padding: const EdgeInsets.only(bottom: 60.0),
-                      child: FloatingActionButton(
-                        elevation: 10,
-                        backgroundColor:
-                            isDarkModeEnabled ? Colors.white : Colors.grey[700],
-                        onPressed: () => {onStateChanged()},
-                        child: Icon(
-                          isDarkModeEnabled
-                              ? Icons.light_mode
-                              : Icons.dark_mode,
-                          color:
-                              isDarkModeEnabled ? Colors.black : Colors.white,
-                        ),
+      // initialRoute: '/',
+      // routes: {
+      //   // When navigating to the "/" route, build the FirstScreen widget.
+      //   '/': (context) => isLoggedIn != null
+      //       ? isLoggedIn
+      //           ? Scaffold(
+      //               body: HomeScreen(),
+      //               floatingActionButton: Padding(
+      //                 padding: const EdgeInsets.only(bottom: 60.0),
+      //                 child: FloatingActionButton(
+      //                   elevation: 10,
+      //                   backgroundColor:
+      //                       isDarkModeEnabled ? Colors.white : Colors.grey[700],
+      //                   onPressed: () => {onStateChanged()},
+      //                   child: Icon(
+      //                     isDarkModeEnabled
+      //                         ? Icons.light_mode
+      //                         : Icons.dark_mode,
+      //                     color:
+      //                         isDarkModeEnabled ? Colors.black : Colors.white,
+      //                   ),
+      //                 ),
+      //               ),
+      //               floatingActionButtonLocation:
+      //                   FloatingActionButtonLocation.miniStartFloat,
+      //             )
+      //           : WelcomeScreen()
+      //       : WelcomeScreen(),
+      // },
+      themeMode: isDarkModeEnabled ? ThemeMode.dark : ThemeMode.light,
+      home: isLoggedIn != null
+          ? isLoggedIn
+              ? Scaffold(
+                  body: HomeScreen(),
+                  floatingActionButton: Padding(
+                    padding: const EdgeInsets.only(bottom: 60.0),
+                    child: FloatingActionButton(
+                      elevation: 10,
+                      backgroundColor:
+                          isDarkModeEnabled ? Colors.white : Colors.grey[700],
+                      onPressed: () => {onStateChanged()},
+                      child: Icon(
+                        isDarkModeEnabled ? Icons.light_mode : Icons.dark_mode,
+                        color: isDarkModeEnabled ? Colors.black : Colors.white,
                       ),
                     ),
-                    floatingActionButtonLocation:
-                        FloatingActionButtonLocation.miniStartFloat,
-                  )
-                : WelcomeScreen()
-            : WelcomeScreen(),
-      },
-      themeMode: isDarkModeEnabled ? ThemeMode.dark : ThemeMode.light,
-      // home: ,
+                  ),
+                  floatingActionButtonLocation:
+                      FloatingActionButtonLocation.miniStartFloat,
+                )
+              : WelcomeScreen()
+          : WelcomeScreen(),
     );
   }
 }
