@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:crypt_chat/constants/app_constants.dart';
+import 'package:crypt_chat/utils/helpers/sessiontimeOut.dart';
 // import 'package:crypt_chat/utils/helpers/shared_pref_helper.dart';
 import 'package:crypt_chat/utils/services/auth.dart';
 import 'package:crypt_chat/utils/services/database.dart';
@@ -26,6 +27,8 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
+  // final GlobalKey<NavigatorState> _navigator = GlobalKey<NavigatorState>();
+
   bool isLoading = false;
 
   AuthMethods authMethods = new AuthMethods();
@@ -87,6 +90,9 @@ class _LoginScreenState extends State<LoginScreen> {
           // if (!FirebaseAuth.instance.currentUser.emailVerified) {
           // await verifyEmail();
           // } else {
+          // Navigate
+          // Start session time out
+          SessionTimerOut(context).sessionHandler();
           // Navigate
           Navigator.pushReplacement(
               context, MaterialPageRoute(builder: (context) => HomeScreen()));

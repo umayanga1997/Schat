@@ -1,3 +1,4 @@
+import 'package:crypt_chat/utils/helpers/sessiontimeOut.dart';
 import 'package:crypt_chat/views/chat_rooms_view.dart';
 import 'package:crypt_chat/views/profile_view.dart';
 import 'package:flutter/material.dart';
@@ -17,6 +18,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  // final GlobalKey<NavigatorState> _navigator = GlobalKey<NavigatorState>();
   final scaffoldKey = GlobalKey<ScaffoldState>();
   int _pageIndex = 0;
   PageController _pageController;
@@ -86,26 +88,31 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     // Define it to control the confirmation state with its own events.
 
-    return Scaffold(
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _pageIndex,
-        type: BottomNavigationBarType.fixed,
-        onTap: onTabTapped,
-        items: [
-          BottomNavigationBarItem(
-              icon: Icon(Icons.message_rounded), label: "Chats"),
-          BottomNavigationBarItem(
-              icon: CircleAvatar(
-                backgroundImage: AssetImage("assets/images/user_avatar.png"),
-                radius: 12,
-              ),
-              label: "Profile"),
-        ],
-      ),
-      body: PageView(
-        children: tabPages,
-        onPageChanged: onPageChanged,
-        controller: _pageController,
+    return GestureDetector(
+      onTap: () {
+        SessionTimerOut(context).sessionHandler();
+      },
+      child: Scaffold(
+        bottomNavigationBar: BottomNavigationBar(
+          currentIndex: _pageIndex,
+          type: BottomNavigationBarType.fixed,
+          onTap: onTabTapped,
+          items: [
+            BottomNavigationBarItem(
+                icon: Icon(Icons.message_rounded), label: "Chats"),
+            BottomNavigationBarItem(
+                icon: CircleAvatar(
+                  backgroundImage: AssetImage("assets/images/user_avatar.png"),
+                  radius: 12,
+                ),
+                label: "Profile"),
+          ],
+        ),
+        body: PageView(
+          children: tabPages,
+          onPageChanged: onPageChanged,
+          controller: _pageController,
+        ),
       ),
     );
   }
