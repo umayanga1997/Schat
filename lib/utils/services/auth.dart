@@ -48,7 +48,7 @@ class AuthMethods {
       // Find key after Remove all of the data from secure storage
       final storage = new FlutterSecureStorage();
       String key_value = await storage.read(key: 'key_of_session');
-      storage.deleteAll();
+      storage.delete(key: "key_of_session");
       // Set null value to Session
       await FlutterSession().set(key_value, null);
 
